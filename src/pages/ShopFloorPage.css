@@ -1,0 +1,57 @@
+.shop-floor-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 1.5rem;
+}
+
+.op-card {
+    display: flex;
+    flex-direction: column;
+}
+
+.op-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.op-component {
+    font-size: 1.25rem;
+    margin-bottom: 0.25rem;
+}
+
+.op-process {
+    font-size: 0.8rem;
+    color: var(--accent-primary);
+    background: #E1F4F9;
+    padding: 0.2rem 0.5rem;
+    border-radius: var(--radius-sm);
+    display: inline-block;
+    margin-bottom: 1rem;
+}
+
+.op-project {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    margin-bottom: 1rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--glass-border);
+}
+
+.op-project strong {
+    color: var(--accent-primary);
+}
+
+.op-details {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+}
+
+.op-actions {
+    display: flex;
+    gap: 0.75rem;
+    margin-top: auto;
+}

@@ -1,0 +1,216 @@
+.flex-layout {
+    display: flex;
+    gap: 2rem;
+    height: calc(100vh - 180px);
+}
+
+.items-sidebar {
+    width: 320px;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+}
+
+.item-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.item-select-card {
+    padding: 1rem;
+    background: var(--bg-secondary);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.item-select-card:hover {
+    background: var(--bg-tertiary);
+}
+
+.item-select-card.active {
+    background: #E1F4F9;
+    border-color: var(--accent-primary);
+}
+
+.item-select-card strong {
+    display: block;
+    color: var(--accent-secondary);
+    font-size: 1.1rem;
+    margin-bottom: 0.25rem;
+}
+
+.item-select-card p {
+    font-size: 0.85rem;
+    color: var(--text-primary);
+    margin-bottom: 0.25rem;
+}
+
+.item-select-card small {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+
+.jis-main {
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+}
+
+.empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: var(--text-muted);
+    text-align: center;
+}
+
+.jis-header {
+    margin-bottom: 2rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--glass-border);
+}
+
+.routing-timeline {
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    padding-left: 1rem;
+}
+
+.routing-step {
+    display: flex;
+    gap: 1.5rem;
+    position: relative;
+    padding-bottom: 2rem;
+}
+
+.routing-step:last-child {
+    padding-bottom: 0;
+}
+
+.step-indicator {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+    z-index: 2;
+    width: 20px;
+}
+
+.circle {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--bg-tertiary);
+    border: 2px solid var(--glass-border);
+    z-index: 2;
+    transition: all var(--transition-fast);
+}
+
+.line {
+    position: absolute;
+    top: 16px;
+    bottom: -2rem;
+    width: 2px;
+    background: var(--glass-border);
+    z-index: 1;
+}
+
+/* Status Colors for Timeline */
+.routing-step.completed .circle {
+    background: var(--success);
+    border-color: #E5F0E8;
+}
+
+.routing-step.active .circle {
+    background: var(--accent-primary);
+    border-color: #E1F4F9;
+}
+
+.routing-step.skipped .circle {
+    background: var(--warning);
+    border-color: #FDEDDF;
+}
+
+.routing-step.completed .line {
+    background: var(--success);
+    opacity: 1;
+}
+
+.step-content {
+    flex: 1;
+    background: var(--bg-secondary);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-md);
+    padding: 1.25rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: all var(--transition-fast);
+}
+
+.routing-step.active .step-content {
+    background: #E1F4F9;
+    border-color: var(--accent-primary);
+}
+
+.routing-step.locked .step-content {
+    opacity: 0.5;
+    filter: grayscale(1);
+    background: var(--bg-primary);
+}
+
+.step-details {
+    display: flex;
+    flex-direction: column;
+}
+
+.op-number {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--accent-primary);
+    margin-bottom: 0.25rem;
+}
+
+.step-details h4 {
+    margin: 0 0 0.5rem 0;
+    font-size: 1rem;
+}
+
+.step-meta {
+    display: flex;
+    gap: 1.5rem;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+}
+
+.step-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.btn-success {
+    background: var(--success);
+    color: white;
+    padding: 0.5rem 1rem;
+    border-radius: var(--radius-md);
+    font-weight: 600;
+    font-size: 0.875rem;
+    transition: all var(--transition-fast);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    border: none;
+    cursor: pointer;
+}
+
+.btn-success:hover {
+    background: #0d6934;
+}
