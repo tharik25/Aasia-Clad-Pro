@@ -1,18 +1,82 @@
 import React, { useState } from 'react';
-import { Plus, X, FileText, ChevronRight, Check, Edit, Trash2, Save } from 'lucide-react';
+import { Plus, X, ChevronRight, Edit, Trash2, Save, Tag, ChevronDown, ChevronUp } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import POLineItemsForm from './POLineItemsForm';
 
+const GRADE_OPTIONS = [
+    '', // empty / unassigned
+    'A105', 'A182 F304', 'A182 F304L', 'A182 F316', 'A182 F316L',
+    'A182 F11', 'A182 F22', 'A350 LF2', 'A234 WPB', 'A234 WP11',
+    'A234 WP22', 'A403 304', 'A403 316', 'Duplex 2205', 'Super Duplex 2507',
+    'Inconel 625', 'Hastelloy C276',
+];
+
+// ── Tag Input Component (reusable) ────────────────────────────────────────────
+const TagInput = ({ tags = [], onChange, placeholder = 'Type and press Enter...' }) => {
+    const [inputVal, setInputVal] = useState('');
+
+    const handleKeyDown = (e) => {
+        if ((e.key === 'Enter' || e.key === ',') && inputVal.trim()) {
+            e.preventDefault();
+            const newTag = inputVal.trim().replace(/,$/, '');
+            if (newTag && !tags.includes(newTag)) onChange([...tags, newTag]);
+            setInputVal('');
+        } else if (e.key === 'Backspace' && !inputVal && tags.length > 0) {
+            onChange(tags.slice(0, -1));
+        }
+    };
+
+    return (
+        <div
+            className="premium-input"
+            style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', minHeight: '2.6rem', padding: '0.4rem 0.75rem', cursor: 'text', height: 'auto' }}
+            onClick={(e) => e.currentTarget.querySelector('input')?.focus()}
+        >
+            {tags.map((tag, i) => (
+                <span key={i} style={{
+                    display: 'inline-flex', alignItems: 'center', gap: '0.3rem',
+                    background: 'rgba(99,102,241,0.18)', color: 'var(--accent-primary)',
+                    borderRadius: '999px', padding: '0.15rem 0.7rem',
+                    fontSize: '0.82rem', fontWeight: 500, border: '1px solid rgba(99,102,241,0.3)',
+                }}>
+                    <Tag size={11} />{tag}
+                    <span onClick={(e) => { e.stopPropagation(); onChange(tags.filter((_, j) => j !== i)); }}
+                        style={{ cursor: 'pointer', lineHeight: 1, marginLeft: '0.1rem', opacity: 0.7 }}>×</span>
+                </span>
+            ))}
+            <input
+                type="text" value={inputVal}
+                onChange={(e) => setInputVal(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder={tags.length === 0 ? placeholder : ''}
+                style={{ border: 'none', outline: 'none', background: 'transparent', color: 'var(--text-primary)', flex: '1 0 120px', minWidth: '80px', fontSize: '0.9rem', padding: '0.1rem 0' }}
+            />
+        </div>
+    );
+};
+// ─────────────────────────────────────────────────────────────────────────────
+
 const POHeaderForm = ({ projectId }) => {
-    const { purchaseOrders, addPurchaseOrder, updatePurchaseOrder, deletePurchaseOrder } = useStore();
+    const {
+        purchaseOrders, addPurchaseOrder, updatePurchaseOrder, deletePurchaseOrder,
+        projects, customers, nmrDocuments
+    } = useStore();
     const [showCreate, setShowCreate] = useState(false);
     const [selectedPO, setSelectedPO] = useState(null);
     const [editingPO, setEditingPO] = useState(null);
+    const [expandedRow, setExpandedRow] = useState(null);
+
+    // Derive the customer's Division from master data
+    const project = projects.find(p => p.id === projectId);
+    const customer = customers.find(c => c.name === project?.customer);
+    const customerDivision = customer?.division || 'DIRECT';
 
     const initialFormState = {
         poNumber: '',
         poDate: new Date().toISOString().split('T')[0],
         poRev: '0',
+        poTags: [],
+        gradeAssignment: '',
         contacts: [{ name: '', email: '', phone: '' }]
     };
 
@@ -31,8 +95,7 @@ const POHeaderForm = ({ projectId }) => {
     };
 
     const handleRemoveContact = (index) => {
-        const newContacts = formData.contacts.filter((_, i) => i !== index);
-        setFormData({ ...formData, contacts: newContacts });
+        setFormData({ ...formData, contacts: formData.contacts.filter((_, i) => i !== index) });
     };
 
     const handleCreateOrUpdate = (e) => {
@@ -59,6 +122,8 @@ const POHeaderForm = ({ projectId }) => {
             poNumber: po.poNumber,
             poDate: po.poDate,
             poRev: po.poRev,
+            poTags: po.poTags || [],
+            gradeAssignment: po.gradeAssignment || '',
             contacts: JSON.parse(JSON.stringify(po.contacts))
         });
         setShowCreate(true);
@@ -99,40 +164,99 @@ const POHeaderForm = ({ projectId }) => {
                     <table className="data-table">
                         <thead>
                             <tr>
+                                <th></th>
                                 <th>Internal ID</th>
                                 <th>Customer PO</th>
                                 <th>Date</th>
                                 <th>Rev</th>
-                                <th>Contacts</th>
+                                <th>Division</th>
+                                <th>NMRs</th>
+                                <th>PO Tags</th>
+                                <th>Grade</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {projectPOs.map(po => (
-                                <tr key={po.id}>
-                                    <td className="text-muted">{po.id}</td>
-                                    <td className="highlight-text">{po.poNumber}</td>
-                                    <td>{po.poDate}</td>
-                                    <td>{po.poRev}</td>
-                                    <td>{po.contacts.length} Contact(s)</td>
-                                    <td>
-                                        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                                            <button className="btn-secondary" style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem' }} onClick={() => setSelectedPO(po)}>
-                                                Manage Line Items
-                                            </button>
-                                            <button className="icon-btn-small" onClick={() => openEdit(po)} title="Edit PO" style={{ color: 'var(--text-secondary)' }}>
-                                                <Edit size={16} />
-                                            </button>
-                                            <button className="icon-btn-small" onClick={() => handleDelete(po.id)} title="Delete PO" style={{ color: 'var(--danger)' }}>
-                                                <Trash2 size={16} />
-                                            </button>
-                                        </div>
-                                    </td>
-                                </tr>
-                            ))}
+                            {projectPOs.map(po => {
+                                const isExpanded = expandedRow === po.id;
+                                const poNmrs = nmrDocuments.filter(n => n.poId === po.id);
+                                const pendingNmrs = poNmrs.filter(n => !['APPROVED', 'CODE-4', 'CODE-D'].includes(n.status));
+
+                                return (
+                                    <React.Fragment key={po.id}>
+                                        <tr
+                                            style={{ cursor: 'pointer', background: isExpanded ? 'rgba(99,102,241,0.05)' : 'transparent' }}
+                                            onClick={() => setExpandedRow(isExpanded ? null : po.id)}
+                                        >
+                                            <td>{isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}</td>
+                                            <td className="text-muted">{po.id}</td>
+                                            <td className="highlight-text">{po.poNumber}</td>
+                                            <td>{po.poDate}</td>
+                                            <td>{po.poRev}</td>
+                                            <td>
+                                                <span className={`badge ${customerDivision === 'DIRECT' ? 'badge-success' : 'badge-info'}`}>
+                                                    {customerDivision}
+                                                </span>
+                                            </td>
+                                            <td>
+                                                {poNmrs.length > 0 ? (
+                                                    <div style={{ display: 'flex', gap: '0.25rem', alignItems: 'center' }}>
+                                                        <span className="badge" style={{ background: 'var(--accent-primary)', color: 'white', fontSize: '0.7rem' }}>{poNmrs.length}</span>
+                                                        {pendingNmrs.length > 0 && (
+                                                            <span className="badge badge-warning" style={{ fontSize: '0.7rem' }} title="Pending Approval">
+                                                                {pendingNmrs.length} P
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                ) : <span className="text-muted">—</span>}
+                                            </td>
+                                            <td>
+                                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.25rem' }}>
+                                                    {(po.poTags || []).length > 0
+                                                        ? (po.poTags || []).map((tag, i) => (
+                                                            <span key={i} style={{
+                                                                display: 'inline-flex', alignItems: 'center', gap: '0.2rem',
+                                                                background: 'rgba(99,102,241,0.12)', color: 'var(--accent-primary)',
+                                                                borderRadius: '999px', padding: '0.1rem 0.5rem',
+                                                                fontSize: '0.75rem', border: '1px solid rgba(99,102,241,0.2)',
+                                                            }}><Tag size={9} />{tag}</span>
+                                                        ))
+                                                        : <span className="text-muted" style={{ fontSize: '0.8rem' }}>—</span>
+                                                    }
+                                                </div>
+                                            </td>
+                                            <td>
+                                                {po.gradeAssignment
+                                                    ? <span className="badge badge-info" style={{ fontSize: '0.78rem' }}>{po.gradeAssignment}</span>
+                                                    : <span className="text-muted" style={{ fontSize: '0.8rem' }}>—</span>
+                                                }
+                                            </td>
+                                            <td onClick={e => e.stopPropagation()}>
+                                                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                                                    <button className="icon-btn-small" onClick={() => openEdit(po)} title="Edit PO" style={{ color: 'var(--text-secondary)' }}>
+                                                        <Edit size={16} />
+                                                    </button>
+                                                    <button className="icon-btn-small" onClick={() => handleDelete(po.id)} title="Delete PO" style={{ color: 'var(--danger)' }}>
+                                                        <Trash2 size={16} />
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        {isExpanded && (
+                                            <tr style={{ background: 'rgba(0,0,0,0.02)' }}>
+                                                <td colSpan="11" style={{ padding: '0' }}>
+                                                    <div style={{ padding: '1.5rem', borderLeft: '4px solid var(--accent-primary)', margin: '0.5rem 1rem 1rem 1.5rem', background: 'rgba(255,255,255,0.3)', borderRadius: '0 8px 8px 0' }}>
+                                                        <POLineItemsForm poId={po.id} projectId={projectId} />
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        )}
+                                    </React.Fragment>
+                                );
+                            })}
                             {projectPOs.length === 0 && (
                                 <tr>
-                                    <td colSpan="6" className="text-center py-4 text-muted">No Purchase Orders associated with this Project.</td>
+                                    <td colSpan="9" className="text-center py-4 text-muted">No Purchase Orders associated with this Project.</td>
                                 </tr>
                             )}
                         </tbody>
@@ -146,6 +270,7 @@ const POHeaderForm = ({ projectId }) => {
                     </div>
                     <form onSubmit={handleCreateOrUpdate} className="so-form">
                         <div className="form-grid">
+                            {/* Row 1: PO Number + PO Date */}
                             <div className="input-group">
                                 <label className="input-label">Customer PO Number</label>
                                 <input
@@ -160,6 +285,8 @@ const POHeaderForm = ({ projectId }) => {
                                     value={formData.poDate} onChange={(e) => setFormData({ ...formData, poDate: e.target.value })} required
                                 />
                             </div>
+
+                            {/* Row 2: PO Rev + Division (read-only from Customer Master) */}
                             <div className="input-group">
                                 <label className="input-label">PO Revision Number</label>
                                 <input
@@ -167,8 +294,43 @@ const POHeaderForm = ({ projectId }) => {
                                     value={formData.poRev} onChange={(e) => setFormData({ ...formData, poRev: e.target.value })} required
                                 />
                             </div>
+                            <div className="input-group">
+                                <label className="input-label">Division <span style={{ color: 'var(--text-muted)', fontWeight: 400, fontSize: '0.78rem' }}>(from Customer Master)</span></label>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', paddingTop: '0.5rem' }}>
+                                    <span className={`badge ${customerDivision === 'DIRECT' ? 'badge-success' : 'badge-info'}`} style={{ fontSize: '0.88rem', padding: '0.35rem 1rem' }}>
+                                        {customerDivision}
+                                    </span>
+                                    {customer
+                                        ? <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>via <strong>{customer.name}</strong></span>
+                                        : <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>No customer linked to project</span>
+                                    }
+                                </div>
+                            </div>
+
+                            {/* Row 3: PO Tags (full width) */}
+                            <div className="input-group" style={{ gridColumn: 'span 2' }}>
+                                <label className="input-label">Customer PO Tags <span style={{ color: 'var(--text-muted)', fontWeight: 400, fontSize: '0.8rem' }}>(press Enter to add)</span></label>
+                                <TagInput
+                                    tags={formData.poTags}
+                                    onChange={(tags) => setFormData({ ...formData, poTags: tags })}
+                                    placeholder="e.g. Phase-1, Revision-A..."
+                                />
+                            </div>
+
+                            {/* Row 4: Grade Assignment */}
+                            <div className="input-group">
+                                <label className="input-label">Grade Assignment</label>
+                                <select
+                                    className="premium-input select-input"
+                                    value={formData.gradeAssignment}
+                                    onChange={(e) => setFormData({ ...formData, gradeAssignment: e.target.value })}
+                                >
+                                    {GRADE_OPTIONS.map(g => <option key={g} value={g}>{g || '— Not Assigned —'}</option>)}
+                                </select>
+                            </div>
                         </div>
 
+                        {/* Contacts Section */}
                         <div className="contacts-section" style={{ marginTop: '2rem', paddingTop: '1.5rem', borderTop: '1px solid var(--glass-border)' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem' }}>
                                 <h4 style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>Customer Contacts</h4>

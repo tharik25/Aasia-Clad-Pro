@@ -7,7 +7,8 @@ import {
     PackageSearch,
     Wrench,
     CheckCircle,
-    Database
+    Database,
+    FileText
 } from 'lucide-react';
 import './Sidebar.css';
 
@@ -42,6 +43,14 @@ const Sidebar = () => {
                 <NavLink to="/projects" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
                     <Briefcase size={20} />
                     <span>Projects & POs</span>
+                </NavLink>
+            </nav>
+
+            <div className="sidebar-heading" style={{ marginTop: '2rem' }}>ENGINEERING</div>
+            <nav className="sidebar-nav">
+                <NavLink to="/nmr" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
+                    <FileText size={20} />
+                    <span>NMR Documents</span>
                 </NavLink>
             </nav>
 

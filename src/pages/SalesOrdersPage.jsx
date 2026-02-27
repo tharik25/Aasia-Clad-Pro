@@ -4,12 +4,12 @@ import { useStore } from '../store/useStore';
 import './SalesOrdersPage.css';
 
 const SalesOrdersPage = () => {
-    const { salesOrders, addSalesOrder } = useStore();
+    const { salesOrders, addSalesOrder, customers } = useStore();
     const [showCreate, setShowCreate] = useState(false);
 
     // Form State
     const [formData, setFormData] = useState({
-        customer: '', poNumber: '', date: '', totalValue: 0, items: []
+        customer: customers.length > 0 ? customers[0].name : '', poNumber: '', date: '', totalValue: 0, items: []
     });
 
     const handleCreate = (e) => {
@@ -21,7 +21,7 @@ const SalesOrdersPage = () => {
         };
         addSalesOrder(newOrder);
         setShowCreate(false);
-        setFormData({ customer: '', poNumber: '', date: '', totalValue: 0, items: [] });
+        setFormData({ customer: customers.length > 0 ? customers[0].name : '', poNumber: '', date: '', totalValue: 0, items: [] });
     };
 
     return (
@@ -92,13 +92,14 @@ const SalesOrdersPage = () => {
                         <div className="form-grid">
                             <div className="input-group">
                                 <label className="input-label">Customer Name</label>
-                                <input
-                                    type="text"
-                                    className="premium-input"
+                                <select
+                                    className="premium-input select-input"
                                     value={formData.customer}
                                     onChange={(e) => setFormData({ ...formData, customer: e.target.value })}
                                     required
-                                />
+                                >
+                                    {customers.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
+                                </select>
                             </div>
                             <div className="input-group">
                                 <label className="input-label">PO Number</label>

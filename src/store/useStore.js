@@ -1,6 +1,24 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
+export const STORE_DATA_KEYS = [
+    'projects',
+    'purchaseOrders',
+    'poLineItems',
+    'spools',
+    'assemblyJoints',
+    'jisOperations',
+    'nmrDocuments',
+    'selectedProjectId',
+    'selectedPOId',
+    'customers',
+    'vendors',
+    'products',
+    'workstations',
+    'projectCounter',
+    'poLineItemCounter'
+];
+
 export const useStore = create(
     persist(
         (set, get) => ({
@@ -11,6 +29,11 @@ export const useStore = create(
             spools: [],
             assemblyJoints: [],
             jisOperations: [],
+            nmrDocuments: [],
+
+            // Selections for Cross-Page Navigation
+            selectedProjectId: null,
+            selectedPOId: null,
 
             // Master Data
             customers: [
@@ -92,7 +115,7 @@ export const useStore = create(
                     const bCode = currentLineItemCounter;
 
                     let spoolCount = 0;
-                    if (item.itemCategory === 'Cladded Pipe') {
+                    if (item.itemCategory.includes('Pipe')) {
                         // For every 12 meters of pipe length, 1 spool is created.
                         spoolCount = Math.ceil((Number(item.pipeLength) || 0) / 12);
                     } else {
@@ -109,7 +132,7 @@ export const useStore = create(
                             poId: item.poId,
                             itemCategory: item.itemCategory,
                             description: item.description,
-                            qtyLength: item.itemCategory === 'Cladded Pipe' ? 12 : 1, // Approximated
+                            qtyLength: item.itemCategory.includes('Pipe') ? 12 : 1, // Approximated
                             barcode: `BC-SP-${projectCode}-${bCode}${String(i).padStart(3, '0')}`,
                             sageCode: '', // Generated later during Cladding Part
                             heatNumber: '',
@@ -226,10 +249,109 @@ export const useStore = create(
             })),
 
             // ==========================================
+            // NMR DOCUMENTS
+            // ==========================================
+            addNmrDocument: (data) => set((state) => {
+                const newDoc = {
+                    ...data,
+                    id: `NMR-${Math.random().toString(36).substr(2, 6).toUpperCase()}`,
+                    // drawingNumber is provided in data
+                    // lineItemIds (array) is provided in data
+                    revision: 'A',          // Always start at Rev A
+                    status: 'DRAFT',
+                    lastCode: null,         // Last client response code
+                    revisionHistory: [],    // { rev, submissionDate, returnDate, code, comment }
+                    createdAt: new Date().toISOString(),
+                };
+                return {
+                    nmrDocuments: [...state.nmrDocuments, newDoc],
+                };
+            }),
+
+            updateNmrDocument: (id, updates) => set((state) => ({
+                nmrDocuments: state.nmrDocuments.map(n => n.id === id ? { ...n, ...updates } : n)
+            })),
+
+            deleteNmrDocument: (id) => set((state) => ({
+                nmrDocuments: state.nmrDocuments.filter(n => n.id !== id)
+            })),
+
+            // Submit current revision for client review (records submissionDate)
+            submitNmrForReview: (id, submissionDate) => set((state) => ({
+                nmrDocuments: state.nmrDocuments.map(n => {
+                    if (n.id !== id) return n;
+                    // Add a history entry for this revision's submission
+                    const existingEntry = n.revisionHistory.find(r => r.rev === n.revision);
+                    const updatedHistory = existingEntry
+                        ? n.revisionHistory.map(r => r.rev === n.revision ? { ...r, submissionDate: submissionDate || new Date().toISOString().split('T')[0] } : r)
+                        : [...n.revisionHistory, { rev: n.revision, submissionDate: submissionDate || new Date().toISOString().split('T')[0], returnDate: null, code: null, comment: '' }];
+                    return { ...n, status: 'SUBMITTED', revisionHistory: updatedHistory };
+                })
+            })),
+
+            // Record client response with code (1, 2, 3, 4, D) + returnDate + comment
+            // Code 1: Approved (but need formal Rev 0 unless already Rev 0)
+            // Code 2: Revise & Resubmit — Work MAY proceed
+            // Code 3: Revise & Resubmit — Work may NOT proceed  
+            // Code 4: Review Not Required — Work may proceed
+            // Code D: For Information Only
+            recordNmrClientResponse: (id, { code, returnDate, comment }) => set((state) => ({
+                nmrDocuments: state.nmrDocuments.map(n => {
+                    if (n.id !== id) return n;
+                    const retDate = returnDate || new Date().toISOString().split('T')[0];
+                    // Update the history entry for current revision
+                    const updatedHistory = n.revisionHistory.map(r =>
+                        r.rev === n.revision ? { ...r, returnDate: retDate, code, comment: comment || '' } : r
+                    );
+                    if (code === '1') {
+                        if (n.revision === '0') {
+                            // Rev 0 gets Code 1 = FULLY APPROVED
+                            return { ...n, status: 'APPROVED', lastCode: '1', revisionHistory: updatedHistory };
+                        }
+                        // Alpha revision gets Code 1 → need to submit formal Rev 0
+                        return { ...n, status: 'PENDING-REV0', lastCode: '1', revisionHistory: updatedHistory };
+                    }
+                    if (code === '2' || code === '3') {
+                        // Revise: bump revision letter A→B→C...
+                        const nextRev = String.fromCharCode(n.revision.charCodeAt(0) + 1);
+                        return { ...n, status: code === '2' ? 'CODE-2' : 'CODE-3', lastCode: code, revision: nextRev, revisionHistory: updatedHistory };
+                    }
+                    if (code === '4') return { ...n, status: 'CODE-4', lastCode: '4', revisionHistory: updatedHistory };
+                    if (code === 'D') return { ...n, status: 'CODE-D', lastCode: 'D', revisionHistory: updatedHistory };
+                    return n;
+                })
+            })),
+
+            // After Code 1 on alpha revision — formally submit Rev 0
+            submitNmrRev0: (id, submissionDate) => set((state) => ({
+                nmrDocuments: state.nmrDocuments.map(n => {
+                    if (n.id !== id) return n;
+                    const rev0Entry = { rev: '0', submissionDate: submissionDate || new Date().toISOString().split('T')[0], returnDate: null, code: null, comment: '' };
+                    return {
+                        ...n,
+                        revision: '0',
+                        status: 'SUBMITTED',
+                        revisionHistory: [...n.revisionHistory, rev0Entry]
+                    };
+                })
+            })),
+
+            // After Code 2/3 — create a new revision draft (already bumped in recordNmrClientResponse)
+            resetNmrToDraft: (id) => set((state) => ({
+                nmrDocuments: state.nmrDocuments.map(n =>
+                    n.id === id ? { ...n, status: 'DRAFT' } : n
+                )
+            })),
+
+            // Selection Actions
+            setSelectedProjectId: (id) => set({ selectedProjectId: id }),
+            setSelectedPOId: (id) => set({ selectedPOId: id }),
+
+            // ==========================================
             // UTILS
             // ==========================================
             clearStore: () => set({
-                projects: [], purchaseOrders: [], poLineItems: [], spools: [], assemblyJoints: [], jisOperations: [], projectCounter: 1, poLineItemCounter: 1
+                projects: [], purchaseOrders: [], poLineItems: [], spools: [], assemblyJoints: [], jisOperations: [], nmrDocuments: [], projectCounter: 1, poLineItemCounter: 1
             })
         }),
         {

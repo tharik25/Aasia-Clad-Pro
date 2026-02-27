@@ -8,6 +8,7 @@ import AssemblyPage from './pages/AssemblyPage';
 import ShopFloorPage from './pages/ShopFloorPage';
 import QualityPage from './pages/QualityPage';
 import MasterDataPage from './pages/MasterDataPage';
+import NMRPage from './pages/NMRPage';
 
 function App() {
   return (
@@ -22,6 +23,7 @@ function App() {
           <Route path="assembly" element={<AssemblyPage />} />
           <Route path="shop-floor" element={<ShopFloorPage />} />
           <Route path="quality" element={<QualityPage />} />
+          <Route path="nmr" element={<NMRPage />} />
           <Route path="*" element={
             <div className="page-wrapper animate-fade-in">
               <h1>404 - Page Not Found</h1>
