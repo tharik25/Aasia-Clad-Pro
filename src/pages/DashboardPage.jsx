@@ -1,123 +1,104 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Briefcase, Wrench, PackageSearch, CheckCircle, Package, TrendingUp } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import './DashboardPage.css';
 
 const DashboardPage = () => {
-    const { projects, purchaseOrders, spools, assemblyJoints, jisOperations } = useStore();
+    const {
+        projects,
+        purchaseOrders,
+        poLineItems,
+        spools,
+        assemblyJoints,
+        jisOperations,
+        nmrDocuments,
+        customers,
+        vendors,
+        products,
+        workstations
+    } = useStore();
 
-    // Calculate metrics
-    const activeProjectsCount = projects.length;
-    const pendingCladdingCount = spools.filter(s => s.status === 'Pending Cladding').length;
-    const completedCladdingCount = spools.filter(s => s.sageCode).length;
-    const assemblyJointsCount = assemblyJoints.length;
+    const navigate = useNavigate();
+    const [activeSection, setActiveSection] = React.useState(null);
 
-    // Get recent activities (completed operations)
-    const recentActivities = jisOperations
-        .filter(op => op.status === 'Completed' || op.status === 'Active')
-        .sort((a, b) => new Date(b.finishDate || b.startDate) - new Date(a.finishDate || a.startDate))
-        .slice(0, 5);
+    const sections = [
+        { key: 'projects', label: 'Projects', count: projects.length, icon: Briefcase, route: '/projects' },
+        { key: 'purchaseOrders', label: 'Purchase Orders', count: purchaseOrders.length, icon: Package, route: '/purchase-orders' },
+        { key: 'spools', label: 'Spools', count: spools.length, icon: Wrench, route: '/inventory' },
+        { key: 'assemblyJoints', label: 'Assemblies', count: assemblyJoints.length, icon: PackageSearch, route: '/assembly' },
+        { key: 'jisOperations', label: 'Operations', count: jisOperations.length, icon: CheckCircle, route: '/operations' },
+        { key: 'nmrDocuments', label: 'NMR Docs', count: nmrDocuments.length, icon: TrendingUp, route: '/nmr' },
+        { key: 'customers', label: 'Customers', count: customers.length, icon: Briefcase, route: '/master-data' },
+        { key: 'vendors', label: 'Vendors', count: vendors.length, icon: Briefcase, route: '/master-data' },
+        { key: 'products', label: 'Products', count: products.length, icon: Package, route: '/master-data' },
+        { key: 'workstations', label: 'Workstations', count: workstations.length, icon: Wrench, route: '/master-data' }
+    ];
+
+    const getSectionItems = (key) => {
+        switch (key) {
+            case 'projects': return projects.slice(-5).map(p => ({ id: p.id, name: p.name || p.clientName }));
+            case 'purchaseOrders': return purchaseOrders.slice(-5).map(po => ({ id: po.id, name: po.id }));
+            case 'spools': return spools.slice(-5).map(s => ({ id: s.id, name: s.description }));
+            case 'assemblyJoints': return assemblyJoints.slice(-5).map(a => ({ id: a.id, name: a.component1 }));
+            case 'jisOperations': return jisOperations.slice(-5).map(j => ({ id: j.id, name: j.processName }));
+            case 'nmrDocuments': return nmrDocuments.slice(-5).map(n => ({ id: n.id, name: n.drawingNumber }));
+            case 'customers': return customers.slice(-5).map(c => ({ id: c.id, name: c.name }));
+            case 'vendors': return vendors.slice(-5).map(v => ({ id: v.id, name: v.name }));
+            case 'products': return products.slice(-5).map(p => ({ id: p.id, name: p.name }));
+            case 'workstations': return workstations.slice(-5).map(w => ({ id: w.id, name: w.name }));
+            default: return [];
+        }
+    };
 
     return (
         <div className="dashboard-container">
-            <div className="dashboard-header animate-fade-in">
+            <header className="dashboard-header animate-fade-in">
                 <div>
-                    <h2>Overview</h2>
-                    <p className="subtitle">Welcome back! Here's the live ETO production status.</p>
+                    <h2>Dashboard</h2>
+                    <p className="subtitle">Interactive insights across the application</p>
                 </div>
-                <button className="btn-primary">Generate Report</button>
+            </header>
+
+            <div className="insights-grid">
+                {sections.map((sec, idx) => {
+                    const Icon = sec.icon;
+                    return (
+                        <div
+                            key={sec.key}
+                            className="insight-card glass-panel"
+                            onClick={() => setActiveSection(sec.key)}
+                            style={{ animationDelay: `${0.05 * idx}s` }}
+                        >
+                            <div className="insight-icon">
+                                <Icon size={28} />
+                            </div>
+                            <div className="insight-info">
+                                <span className="insight-value">{sec.count}</span>
+                                <span className="insight-label">{sec.label}</span>
+                            </div>
+                        </div>
+                    );
+                })}
             </div>
 
-            <div className="stats-grid">
-                <div className="stat-card glass-panel animate-fade-in" style={{ animationDelay: '0.1s' }}>
-                    <div className="stat-icon-wrapper" style={{ background: 'rgba(59, 130, 246, 0.2)', color: 'var(--accent-primary)' }}>
-                        <Briefcase size={24} />
-                    </div>
-                    <div className="stat-info">
-                        <span className="stat-value">{activeProjectsCount}</span>
-                        <span className="stat-label">Active Projects</span>
-                    </div>
-                </div>
-                <div className="stat-card glass-panel animate-fade-in" style={{ animationDelay: '0.2s' }}>
-                    <div className="stat-icon-wrapper" style={{ background: 'rgba(245, 158, 11, 0.2)', color: 'var(--warning)' }}>
-                        <Wrench size={24} />
-                    </div>
-                    <div className="stat-info">
-                        <span className="stat-value">{pendingCladdingCount}</span>
-                        <span className="stat-label">Pending Cladding</span>
-                    </div>
-                </div>
-                <div className="stat-card glass-panel animate-fade-in" style={{ animationDelay: '0.3s' }}>
-                    <div className="stat-icon-wrapper" style={{ background: 'rgba(16, 185, 129, 0.2)', color: 'var(--success)' }}>
-                        <Package size={24} />
-                    </div>
-                    <div className="stat-info">
-                        <span className="stat-value">{completedCladdingCount}</span>
-                        <span className="stat-label">Cladded (Sage Codes)</span>
-                    </div>
-                </div>
-                <div className="stat-card glass-panel animate-fade-in" style={{ animationDelay: '0.4s' }}>
-                    <div className="stat-icon-wrapper" style={{ background: 'rgba(139, 92, 246, 0.2)', color: 'var(--accent-secondary)' }}>
-                        <PackageSearch size={24} />
-                    </div>
-                    <div className="stat-info">
-                        <span className="stat-value">{assemblyJointsCount}</span>
-                        <span className="stat-label">Assembly Joints Planned</span>
-                    </div>
-                </div>
-            </div>
-
-            <div className="dashboard-grid animate-fade-in" style={{ animationDelay: '0.5s' }}>
-                <div className="glass-panel main-chart">
-                    <h3>Production Output (Weekly)</h3>
-                    <div className="chart-placeholder">
-                        <div className="bar-wrapper">
-                            <div className="bar" style={{ height: '60%' }}></div>
-                            <span>Mon</span>
-                        </div>
-                        <div className="bar-wrapper">
-                            <div className="bar" style={{ height: '80%', background: 'var(--success)' }}></div>
-                            <span>Tue</span>
-                        </div>
-                        <div className="bar-wrapper">
-                            <div className="bar" style={{ height: '40%' }}></div>
-                            <span>Wed</span>
-                        </div>
-                        <div className="bar-wrapper">
-                            <div className="bar" style={{ height: '90%', background: 'var(--accent-gradient)' }}></div>
-                            <span>Thu</span>
-                        </div>
-                        <div className="bar-wrapper">
-                            <div className="bar" style={{ height: '70%' }}></div>
-                            <span>Fri</span>
-                        </div>
-                    </div>
-                </div>
-
-                <div className="glass-panel recent-activity">
-                    <h3>Recent Operations</h3>
-                    <ul className="activity-list">
-                        {recentActivities.map((op, idx) => (
-                            <li key={idx}>
-                                <div className={`activity-indicator ${op.status === 'Completed' ? 'success' : 'info'}`}></div>
-                                <div className="activity-content">
-                                    <p><strong>{op.processName}</strong> {op.status === 'Completed' ? 'passed inspection' : 'in progress'} by {op.inspectorId || 'Unknown'}</p>
-                                    <span>{new Date(op.finishDate || op.startDate).toLocaleTimeString()} - {op.description}</span>
-                                </div>
-                            </li>
+            {activeSection && (
+                <section className="section-details glass-panel animate-fade-in">
+                    <h3>Latest {sections.find(s => s.key === activeSection)?.label}</h3>
+                    <ul>
+                        {getSectionItems(activeSection).map(item => (
+                            <li key={item.id}>{item.name || item.id}</li>
                         ))}
-                        {recentActivities.length === 0 && (
-                            <li>
-                                <div className="activity-content">
-                                    <p className="text-muted">No recent operations logged yet.</p>
-                                </div>
-                            </li>
-                        )}
                     </ul>
-                </div>
-            </div>
+                    <button
+                        className="btn-link"
+                        onClick={() => navigate(sections.find(s => s.key === activeSection)?.route)}
+                    >
+                        View all {sections.find(s => s.key === activeSection)?.label.toLowerCase()}
+                    </button>
+                </section>
+            )}
         </div>
     );
 };
-
 export default DashboardPage;

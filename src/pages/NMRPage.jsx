@@ -201,11 +201,13 @@ const NMRPage = () => {
                     <h2>NMR Documents</h2>
                     <p className="subtitle">Non-Material Requirements — revision-controlled, CODE 1 client approval required before production may proceed.</p>
                 </div>
-                {!showCreate && (
-                    <button className="btn-primary" onClick={() => setShowCreate(true)}>
-                        <Plus size={18} /> New NMR
-                    </button>
-                )}
+                <div style={{ display: 'flex', gap: '0.75rem' }}>
+                    {!showCreate && (
+                        <button className="btn-primary" onClick={() => setShowCreate(true)}>
+                            <Plus size={18} /> New NMR
+                        </button>
+                    )}
+                </div>
             </div>
 
             {/* ── Code Legend ───────────────────────────────────────────── */}

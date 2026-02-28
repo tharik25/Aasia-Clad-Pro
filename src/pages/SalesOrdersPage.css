@@ -94,6 +94,13 @@
     gap: 1.5rem;
 }
 
+/* stack fields on narrow screens */
+@media (max-width: 600px) {
+    .form-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
 .form-actions {
     margin-top: 2rem;
     display: flex;

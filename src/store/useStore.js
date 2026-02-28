@@ -9,6 +9,7 @@ export const STORE_DATA_KEYS = [
     'assemblyJoints',
     'jisOperations',
     'nmrDocuments',
+    'mtos',
     'selectedProjectId',
     'selectedPOId',
     'customers',
@@ -30,6 +31,7 @@ export const useStore = create(
             assemblyJoints: [],
             jisOperations: [],
             nmrDocuments: [],
+            mtos: [],
 
             // Selections for Cross-Page Navigation
             selectedProjectId: null,
@@ -78,7 +80,8 @@ export const useStore = create(
                 projects: state.projects.filter(p => p.id !== id),
                 purchaseOrders: state.purchaseOrders.filter(po => po.projectId !== id),
                 poLineItems: state.poLineItems.filter(li => li.projectId !== id),
-                spools: state.spools.filter(s => s.projectId !== id)
+                spools: state.spools.filter(s => s.projectId !== id),
+                mtos: state.mtos.filter(m => m.projectId !== id)
             })),
 
             // ==========================================
@@ -93,7 +96,8 @@ export const useStore = create(
             deletePurchaseOrder: (id) => set((state) => ({
                 purchaseOrders: state.purchaseOrders.filter(po => po.id !== id),
                 poLineItems: state.poLineItems.filter(li => li.poId !== id),
-                spools: state.spools.filter(s => s.poId !== id)
+                spools: state.spools.filter(s => s.poId !== id),
+                mtos: state.mtos.filter(m => m.purchaseOrderId !== id)
             })),
 
             // ==========================================
@@ -273,7 +277,8 @@ export const useStore = create(
             })),
 
             deleteNmrDocument: (id) => set((state) => ({
-                nmrDocuments: state.nmrDocuments.filter(n => n.id !== id)
+                nmrDocuments: state.nmrDocuments.filter(n => n.id !== id),
+                mtos: state.mtos.filter(m => m.nmrDocumentId !== id)
             })),
 
             // Submit current revision for client review (records submissionDate)
@@ -336,6 +341,22 @@ export const useStore = create(
                 })
             })),
 
+            // ==========================================
+            // MATERIAL TAKE-OFFS (MTOs)
+            // ==========================================
+            addMTO: (mtoData) => set((state) => ({
+                mtos: [...state.mtos, { ...mtoData, id: `MTO-${Math.random().toString(36).substr(2, 6).toUpperCase()}` }]
+            })),
+
+            updateMTO: (id, updates) => set((state) => ({
+                mtos: state.mtos.map(m => m.id === id ? { ...m, ...updates } : m)
+            })),
+
+            deleteMTO: (id) => set((state) => ({
+                mtos: state.mtos.filter(m => m.id !== id)
+            })),
+
+
             // After Code 2/3 — create a new revision draft (already bumped in recordNmrClientResponse)
             resetNmrToDraft: (id) => set((state) => ({
                 nmrDocuments: state.nmrDocuments.map(n =>
@@ -351,7 +372,7 @@ export const useStore = create(
             // UTILS
             // ==========================================
             clearStore: () => set({
-                projects: [], purchaseOrders: [], poLineItems: [], spools: [], assemblyJoints: [], jisOperations: [], nmrDocuments: [], projectCounter: 1, poLineItemCounter: 1
+                projects: [], purchaseOrders: [], poLineItems: [], spools: [], assemblyJoints: [], jisOperations: [], nmrDocuments: [], mtos: [], projectCounter: 1, poLineItemCounter: 1
             })
         }),
         {

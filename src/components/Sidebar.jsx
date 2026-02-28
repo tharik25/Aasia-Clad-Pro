@@ -52,6 +52,10 @@ const Sidebar = () => {
                     <FileText size={20} />
                     <span>NMR Documents</span>
                 </NavLink>
+                <NavLink to="/mto" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
+                    <PackageSearch size={20} />
+                    <span>Material Take‑Offs</span>
+                </NavLink>
             </nav>
 
             <div className="sidebar-heading" style={{ marginTop: '2rem' }}>SHOP FLOOR</div>
