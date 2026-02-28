@@ -3,13 +3,108 @@ import { Plus, X, ChevronRight, Edit, Trash2, Save, Tag, ChevronDown, ChevronUp 
 import { useStore } from '../store/useStore';
 import POLineItemsForm from './POLineItemsForm';
 
-const GRADE_OPTIONS = [
-    '', // empty / unassigned
-    'A105', 'A182 F304', 'A182 F304L', 'A182 F316', 'A182 F316L',
-    'A182 F11', 'A182 F22', 'A350 LF2', 'A234 WPB', 'A234 WP11',
-    'A234 WP22', 'A403 304', 'A403 316', 'Duplex 2205', 'Super Duplex 2507',
-    'Inconel 625', 'Hastelloy C276',
+const DEFAULT_BANKS = [
+    'Saudi National Bank (SNB)',
+    'Al Rajhi Bank',
+    'Riyad Bank',
+    'Saudi British Bank (SABB)',
+    'Arab National Bank (ANB)',
+    'Bank Al Bilad',
+    'Bank AlJazira',
+    'Capital Bank',
+    'Alkobiar Bank',
+    'Gulf International Bank (GIB)',
+    'Arab Banking Corporation',
+    'Small Business Bank',
 ];
+
+// ── Bank Input Component (reusable) ────────────────────────────────────────────
+const BankInput = ({ banks = [], onChange, availableBanks = DEFAULT_BANKS }) => {
+    const [inputVal, setInputVal] = useState('');
+    const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+
+    const handleSelect = (bank) => {
+        if (bank && !banks.includes(bank)) {
+            onChange([...banks, bank]);
+        }
+        setInputVal('');
+        setIsDropdownOpen(false);
+    };
+
+    const handleKeyDown = (e) => {
+        if (e.key === 'Enter' && inputVal.trim()) {
+            e.preventDefault();
+            const newBank = inputVal.trim();
+            if (newBank && !banks.includes(newBank)) {
+                onChange([...banks, newBank]);
+            }
+            setInputVal('');
+            setIsDropdownOpen(false);
+        } else if (e.key === 'Backspace' && !inputVal && banks.length > 0) {
+            onChange(banks.slice(0, -1));
+        }
+    };
+
+    const filteredBanks = availableBanks.filter(b => 
+        !banks.includes(b) && b.toLowerCase().includes(inputVal.toLowerCase())
+    );
+
+    return (
+        <div style={{ position: 'relative' }}>
+            <div
+                className="premium-input"
+                style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', minHeight: '2.6rem', padding: '0.4rem 0.75rem', cursor: 'text', height: 'auto' }}
+                onClick={(e) => e.currentTarget.querySelector('input')?.focus()}
+            >
+                {banks.map((bank, i) => (
+                    <span key={i} style={{
+                        display: 'inline-flex', alignItems: 'center', gap: '0.3rem',
+                        background: 'rgba(59, 130, 246, 0.18)', color: '#3b82f6',
+                        borderRadius: '999px', padding: '0.15rem 0.7rem',
+                        fontSize: '0.82rem', fontWeight: 500, border: '1px solid rgba(59, 130, 246, 0.3)',
+                    }}>
+                        {bank}
+                        <span onClick={(e) => { e.stopPropagation(); onChange(banks.filter((_, j) => j !== i)); }}
+                            style={{ cursor: 'pointer', lineHeight: 1, marginLeft: '0.1rem', opacity: 0.7 }}>×</span>
+                    </span>
+                ))}
+                <input
+                    type="text" value={inputVal}
+                    onChange={(e) => { setInputVal(e.target.value); setIsDropdownOpen(true); }}
+                    onKeyDown={handleKeyDown}
+                    onFocus={() => setIsDropdownOpen(true)}
+                    onBlur={() => setTimeout(() => setIsDropdownOpen(false), 200)}
+                    placeholder={banks.length === 0 ? 'Search or add banks...' : ''}
+                    style={{ border: 'none', outline: 'none', background: 'transparent', color: 'var(--text-primary)', flex: '1 0 150px', minWidth: '100px', fontSize: '0.9rem', padding: '0.1rem 0' }}
+                />
+            </div>
+            {isDropdownOpen && filteredBanks.length > 0 && (
+                <div style={{
+                    position: 'absolute', top: '100%', left: 0, right: 0, marginTop: '0.25rem',
+                    background: 'var(--glass-bg)', border: '1px solid var(--glass-border)',
+                    borderRadius: '0.5rem', boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                    zIndex: 1000, maxHeight: '200px', overflowY: 'auto'
+                }}>
+                    {filteredBanks.map((bank, i) => (
+                        <div key={i}
+                            onClick={() => handleSelect(bank)}
+                            style={{
+                                padding: '0.6rem 0.75rem', cursor: 'pointer',
+                                borderBottom: i < filteredBanks.length - 1 ? '1px solid var(--glass-border)' : 'none',
+                                fontSize: '0.9rem', color: 'var(--text-primary)',
+                            }}
+                            onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(59, 130, 246, 0.1)'}
+                            onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                        >
+                            {bank}
+                        </div>
+                    ))}
+                </div>
+            )}
+        </div>
+    );
+};
+// ─────────────────────────────────────────────────────────────────────────────
 
 // ── Tag Input Component (reusable) ────────────────────────────────────────────
 const TagInput = ({ tags = [], onChange, placeholder = 'Type and press Enter...' }) => {
@@ -76,7 +171,7 @@ const POHeaderForm = ({ projectId }) => {
         poDate: new Date().toISOString().split('T')[0],
         poRev: '0',
         poTags: [],
-        gradeAssignment: '',
+        bankAssignments: [],
         contacts: [{ name: '', email: '', phone: '' }]
     };
 
@@ -123,7 +218,7 @@ const POHeaderForm = ({ projectId }) => {
             poDate: po.poDate,
             poRev: po.poRev,
             poTags: po.poTags || [],
-            gradeAssignment: po.gradeAssignment || '',
+            bankAssignments: po.bankAssignments || [],
             contacts: JSON.parse(JSON.stringify(po.contacts))
         });
         setShowCreate(true);
@@ -172,7 +267,7 @@ const POHeaderForm = ({ projectId }) => {
                                 <th>Division</th>
                                 <th>NMRs</th>
                                 <th>PO Tags</th>
-                                <th>Grade</th>
+                                <th>Bank Assignments</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
@@ -226,8 +321,12 @@ const POHeaderForm = ({ projectId }) => {
                                                 </div>
                                             </td>
                                             <td>
-                                                {po.gradeAssignment
-                                                    ? <span className="badge badge-info" style={{ fontSize: '0.78rem' }}>{po.gradeAssignment}</span>
+                                                {(po.bankAssignments && po.bankAssignments.length > 0)
+                                                    ? <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.25rem' }}>
+                                                        {po.bankAssignments.map((bank, i) => (
+                                                            <span key={i} className="badge badge-info" style={{ fontSize: '0.75rem' }}>{bank}</span>
+                                                        ))}
+                                                    </div>
                                                     : <span className="text-muted" style={{ fontSize: '0.8rem' }}>—</span>
                                                 }
                                             </td>
@@ -317,16 +416,14 @@ const POHeaderForm = ({ projectId }) => {
                                 />
                             </div>
 
-                            {/* Row 4: Grade Assignment */}
-                            <div className="input-group">
-                                <label className="input-label">Grade Assignment</label>
-                                <select
-                                    className="premium-input select-input"
-                                    value={formData.gradeAssignment}
-                                    onChange={(e) => setFormData({ ...formData, gradeAssignment: e.target.value })}
-                                >
-                                    {GRADE_OPTIONS.map(g => <option key={g} value={g}>{g || '— Not Assigned —'}</option>)}
-                                </select>
+                            {/* Row 4: Bank Assignments */}
+                            <div className="input-group" style={{ gridColumn: 'span 2' }}>
+                                <label className="input-label">Bank Assignments <span style={{ color: 'var(--text-muted)', fontWeight: 400, fontSize: '0.8rem' }}>(KSA Banks - press Enter to add custom)</span></label>
+                                <BankInput
+                                    banks={formData.bankAssignments}
+                                    onChange={(banks) => setFormData({ ...formData, bankAssignments: banks })}
+                                    availableBanks={DEFAULT_BANKS}
+                                />
                             </div>
                         </div>
 
